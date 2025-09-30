@@ -1,0 +1,8 @@
+install.packages(c("readr", "dplyr", "neuralnet", "xgboost", "ggplot2"))
+library(readr)
+library(dplyr)
+library(neuralnet)
+library(xgboost)
+library(ggplot2)
+data <- read_csv("C:/Users/DELL/Downloads/air_quality_prediction_dataset.csv", show_col_types = FALSE)
+if("Date" %in% names(data)) data <- data %>% select(-Date)
