@@ -1,0 +1,53 @@
+library(readr)
+library(dplyr)
+library(neuralnet)
+library(xgboost)
+library(ggplot2)
+set.seed(123)
+n <- 300
+
+data <- data.frame(
+  PM10   = runif(n, 50, 300),
+  PM2.5  = runif(n, 30, 180),   # Target variable
+  NO2    = runif(n, 10, 80),
+  SO2    = runif(n, 5, 60),
+  CO     = runif(n, 0.5, 3.5),
+  O3     = runif(n, 10, 120),
+  AQI    = NA
+)
+
+data$AQI <- 0.45 * data$PM2.5 + 0.25 * data$PM10 +
+            0.15 * data$NO2 + 0.1 * data$SO2 +
+            0.05 * data$O3 + rnorm(n, 0, 8)
+
+set.seed(42)
+train_index <- sample(1:n, 0.7*n)
+train_data <- data[train_index, ]
+test_data  <- data[-train_index, ]
+
+train_x <- as.matrix(train_data %>% select(-PM2.5))
+train_y <- train_data$PM2.5
+
+test_x <- as.matrix(test_data %>% select(-PM2.5))
+test_y <- test_data$PM2.5
+
+dtrain <- xgb.DMatrix(data = train_x, label = train_y)
+dtest  <- xgb.DMatrix(data = test_x, label = test_y)
+
+xgb_model <- xgboost(
+  data = dtrain,
+  nrounds = 60,
+  objective = "reg:squarederror",
+  verbose = 0
+)
+
+importance_matrix <- xgb.importance(feature_names = colnames(train_x), model = xgb_model)
+
+importance_matrix$Percentage <- importance_matrix$Gain / sum(importance_matrix$Gain) * 100
+
+ggplot(importance_matrix, aes(x = "", y = Percentage, fill = Feature)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  labs(title = "Pollutant Contribution to PM2.5 Prediction (XGBoost)") +
+  theme_void() +
+  theme(legend.position = "right")
